@@ -185,6 +185,21 @@ body {
 }
 
 /* Review */
+#view-review.active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 72px - 32px);
+}
+#view-review .review-header {
+  flex-shrink: 0;
+}
+#view-review .review-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 6vh;
+}
 .review-header {
   display: flex;
   justify-content: space-between;
@@ -606,28 +621,30 @@ body.hide-cn .browse-item-cn { display: none; }
       <span class="review-progress" id="review-progress"></span>
       <button class="btn-back" id="btn-review-back">戻る</button>
     </div>
-    <div class="card-container" id="card-container">
-      <div class="card" id="flashcard">
-        <div class="card-face card-front">
-          <div class="card-level-badge" id="card-level-badge"></div>
-          <div class="card-term" id="card-term"></div>
-          <div class="card-hint">タップして分類を確認</div>
-        </div>
-        <div class="card-face card-back" id="card-back">
-          <div class="card-category" id="card-category"></div>
-          <div class="card-category-cn" id="card-category-cn"></div>
-          <div class="card-term-back" id="card-term-back"></div>
-          <div class="card-cn" id="card-cn"></div>
-          <div class="card-note-ja" id="card-note-ja"></div>
-          <div class="card-note" id="card-note"></div>
+    <div class="review-content">
+      <div class="card-container" id="card-container">
+        <div class="card" id="flashcard">
+          <div class="card-face card-front">
+            <div class="card-level-badge" id="card-level-badge"></div>
+            <div class="card-term" id="card-term"></div>
+            <div class="card-hint">タップして分類を確認</div>
+          </div>
+          <div class="card-face card-back" id="card-back">
+            <div class="card-category" id="card-category"></div>
+            <div class="card-category-cn" id="card-category-cn"></div>
+            <div class="card-term-back" id="card-term-back"></div>
+            <div class="card-cn" id="card-cn"></div>
+            <div class="card-note-ja" id="card-note-ja"></div>
+            <div class="card-note" id="card-note"></div>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="rating-buttons" id="rating-buttons">
-      <button class="rating-btn" data-quality="0">忘れた</button>
-      <button class="rating-btn" data-quality="3">難しい</button>
-      <button class="rating-btn" data-quality="4">良い</button>
-      <button class="rating-btn" data-quality="5">簡単</button>
+      <div class="rating-buttons" id="rating-buttons">
+        <button class="rating-btn" data-quality="0">忘れた</button>
+        <button class="rating-btn" data-quality="3">難しい</button>
+        <button class="rating-btn" data-quality="4">良い</button>
+        <button class="rating-btn" data-quality="5">簡単</button>
+      </div>
     </div>
     <div id="review-complete" style="display:none">
       <div class="complete-emoji">&#127881;</div>
