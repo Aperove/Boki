@@ -1,0 +1,16 @@
+{
+  "name": "簿記 勘定科目",
+  "short_name": "簿記暗記",
+  "description": "簿記の勘定科目を覚えるためのフラッシュカードアプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23121212' width='100' height='100' rx='20'/><text x='50' y='65' text-anchor='middle' font-size='50' fill='%23BB86FC'>簿</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
