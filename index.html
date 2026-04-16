@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>簿記 勘定科目</title>
+<style>
+:root {
+  --bg-primary: #121212;
+  --bg-secondary: #1E1E1E;
+  --bg-card: #2A2A2A;
+  --text-primary: #ECECEC;
+  --text-secondary: #A0A0A0;
+  --accent: #BB86FC;
+  --cat-asset: #4CAF50;
+  --cat-liability: #F44336;
+  --cat-net-asset: #9C27B0;
+  --cat-revenue: #2196F3;
+  --cat-expense: #FF9800;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Views */
+.view { display: none; }
+.view.active { display: block; }
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bg-secondary);
+  border-top: 1px solid #333;
+  display: flex;
+  z-index: 100;
+}
+.bottom-nav button {
+  flex: 1;
+  background: none; border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: color 0.2s;
+  touch-action: manipulation;
+}
+.bottom-nav button.active { color: var(--accent); }
+.bottom-nav button svg { width: 24px; height: 24px; fill: currentColor; }
+
+/* Dashboard */
+.dash-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.dash-header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.dash-header p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-card .stat-num {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.stat-card.due .stat-num { color: #FF9800; }
+.stat-card.new .stat-num { color: var(--accent); }
+.stat-card.mastered .stat-num { color: #4CAF50; }
+.stat-card.total .stat-num { color: var(--text-primary); }
+
+.category-progress {
+  margin-bottom: 24px;
+}
+.category-progress h2 {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.cat-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cat-name {
+  font-size: 0.85rem;
+  width: 60px;
+  flex-shrink: 0;
+}
+.cat-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cat-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.cat-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.btn-start {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #121212;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 0.2s;
+}
+.btn-start:active { opacity: 0.8; }
+.btn-start:disabled {
+  background: #444;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.dash-footer {
+  text-align: center;
+  margin-top: 16px;
+}
+.btn-reset {
+  background: none; border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  touch-action: manipulation;
+}
+
+/* Review */
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.review-progress {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.btn-back {
+  background: none; border: 1px solid #444;
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.card-container {
+  width: 100%;
+  min-height: 200px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.card {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  transition: transform 0.15s ease;
+}
+.card:active { transform: scale(0.98); }
+.card-face {
+  width: 100%;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+.card-front {
+  background: var(--bg-card);
+  position: relative;
+}
+.card-front.hidden { display: none; }
+.card-level-badge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+}
+.card-front .card-term {
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  font-weight: 700;
+  text-align: center;
+}
+.card-front .card-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 16px;
+}
+.card-back {
+  display: none;
+  border: 2px solid;
+  animation: flipIn 0.35s ease;
+}
+.card-back.visible { display: flex; }
+@keyframes flipIn {
+  0% { transform: rotateY(90deg); opacity: 0.5; }
+  100% { transform: rotateY(0deg); opacity: 1; }
+}
+.card-back .card-category {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.card-back .card-category-cn {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.card-back .card-term-back {
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.card-back .card-cn {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+.card-back .card-note-ja {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.card-back .card-note {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.rating-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  position: relative;
+  z-index: 10;
+}
+.rating-buttons.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rating-btn {
+  min-height: 48px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.15s;
+}
+.rating-btn:active { opacity: 0.7; }
+.rating-btn[data-quality="0"] { background: #D32F2F; color: #fff; }
+.rating-btn[data-quality="3"] { background: #F57C00; color: #fff; }
+.rating-btn[data-quality="4"] { background: #388E3C; color: #fff; }
+.rating-btn[data-quality="5"] { background: #1976D2; color: #fff; }
+
+.card-container.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#review-complete {
+  text-align: center;
+  padding: 60px 20px;
+}
+#review-complete .complete-emoji {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+#review-complete .complete-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+#review-complete .complete-sub {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.btn-dashboard {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #121212;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Browse */
+.browse-header {
+  margin-bottom: 16px;
+}
+.browse-header h1 {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+
+/* T-chart view */
+.browse-chart-wrap { display: none; }
+.browse-chart-wrap.active { display: block; }
+
+.t-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.t-chart-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid #444;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.t-chart-cell {
+  padding: 10px;
+  min-height: 80px;
+}
+.t-chart-cell.left {
+  border-right: 1px solid #444;
+}
+.t-chart-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #888;
+  margin-bottom: 6px;
+  text-align: center;
+}
+.t-chart-cat-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-bottom: 8px;
+  padding: 3px 0;
+  border-radius: 4px;
+}
+.t-chart-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.t-chart-item {
+  font-size: 0.75rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.04);
+}
+.t-chart-item .t-cn {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+body.hide-cn .t-cn { display: none; }
+
+.t-chart-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+.t-chart-divider::before,
+.t-chart-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #333;
+}
+.t-chart-divider span {
+  font-size: 0.7rem;
+  color: #555;
+}
+
+/* Right cell top: stack liability + net-asset */
+.t-chart-cell.right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.t-chart-sub-block {
+  flex: 1;
+}
+.t-chart-sub-divider {
+  height: 1px;
+  background: #333;
+  margin: 2px 0;
+}
+
+/* Level Filter */
+.level-filter {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.level-chip {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1.5px solid #444;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.2s;
+}
+.level-chip.active {
+  border-color: var(--accent);
+  background: rgba(187, 134, 252, 0.15);
+  color: var(--accent);
+}
+.level-chip:active { opacity: 0.7; }
+
+/* Toggle switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.toggle-row .toggle-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #444;
+  border-radius: 22px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  left: 3px; bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+/* Hide Chinese text */
+body.hide-cn .card-category-cn,
+body.hide-cn .card-cn,
+body.hide-cn .card-note,
+body.hide-cn .browse-item-cn { display: none; }
+
+/* Level badge in browse & card */
+.level-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.level-badge.lv3 { background: #388E3C; color: #fff; }
+.level-badge.lv2 { background: #1976D2; color: #fff; }
+.level-badge.lv2k { background: #F57C00; color: #fff; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Dashboard -->
+  <section id="view-dashboard" class="view active">
+    <div class="dash-header">
+      <h1>簿記 勘定科目</h1>
+      <p id="streak-text"></p>
+    </div>
+    <div class="level-filter" id="level-filter">
+      <button class="level-chip active" data-level="3">3級</button>
+      <button class="level-chip" data-level="2">2級 商業</button>
+      <button class="level-chip" data-level="2k">2級 工業</button>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">中文表示</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-cn" class="toggle-cn-sync" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card due">
+        <div class="stat-num" id="stat-due">0</div>
+        <div class="stat-label">到期復習</div>
+      </div>
+      <div class="stat-card new">
+        <div class="stat-num" id="stat-new">0</div>
+        <div class="stat-label">新規カード</div>
+      </div>
+      <div class="stat-card mastered">
+        <div class="stat-num" id="stat-mastered">0</div>
+        <div class="stat-label">習得済み</div>
+      </div>
+      <div class="stat-card total">
+        <div class="stat-num" id="stat-total">0</div>
+        <div class="stat-label">全体</div>
+      </div>
+    </div>
+    <div class="category-progress">
+      <h2>分類別の進捗</h2>
+      <div id="cat-progress-list"></div>
+    </div>
+    <button class="btn-start" id="btn-start">復習を始める</button>
+    <div class="dash-footer">
+      <button class="btn-reset" id="btn-reset">進捗をリセット</button>
+    </div>
+  </section>
+
+  <!-- Review -->
+  <section id="view-review" class="view">
+    <div class="review-header">
+      <span class="review-progress" id="review-progress"></span>
+      <button class="btn-back" id="btn-review-back">戻る</button>
+    </div>
+    <div class="card-container" id="card-container">
+      <div class="card" id="flashcard">
+        <div class="card-face card-front">
+          <div class="card-level-badge" id="card-level-badge"></div>
+          <div class="card-term" id="card-term"></div>
+          <div class="card-hint">タップして分類を確認</div>
+        </div>
+        <div class="card-face card-back" id="card-back">
+          <div class="card-category" id="card-category"></div>
+          <div class="card-category-cn" id="card-category-cn"></div>
+          <div class="card-term-back" id="card-term-back"></div>
+          <div class="card-cn" id="card-cn"></div>
+          <div class="card-note-ja" id="card-note-ja"></div>
+          <div class="card-note" id="card-note"></div>
+        </div>
+      </div>
+    </div>
+    <div class="rating-buttons" id="rating-buttons">
+      <button class="rating-btn" data-quality="0">忘れた</button>
+      <button class="rating-btn" data-quality="3">難しい</button>
+      <button class="rating-btn" data-quality="4">良い</button>
+      <button class="rating-btn" data-quality="5">簡単</button>
+    </div>
+    <div id="review-complete" style="display:none">
+      <div class="complete-emoji">&#127881;</div>
+      <div class="complete-text">お疲れ様！</div>
+      <div class="complete-sub" id="complete-sub">今日の復習は完了です</div>
+      <button class="btn-dashboard" id="btn-complete-back">ダッシュボードへ</button>
+    </div>
+  </section>
+
+  <!-- Browse -->
+  <section id="view-browse" class="view">
+    <div class="browse-header">
+      <h1>科目一覧</h1>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">中文表示</span>
+      <label class="toggle-switch">
+        <input type="checkbox" class="toggle-cn-sync" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div id="browse-chart"></div>
+  </section>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button data-view="dashboard" class="active">
+    <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    <span>ホーム</span>
+  </button>
+  <button data-view="review">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+    <span>復習</span>
+  </button>
+  <button data-view="browse">
+    <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+    <span>一覧</span>
+  </button>
+</nav>
+
+<script src="data.js"></script>
+<script>
+const STORAGE_KEY = 'boki3-flashcards';
+const LEVEL_KEY = 'boki-levels';
+const CN_KEY = 'boki-show-cn';
+
+// ─── Level Filter ───
+let activeLevels = new Set(['3']); // default: 3級 only
+
+function loadLevels() {
+  try {
+    const raw = localStorage.getItem(LEVEL_KEY);
+    if (raw) activeLevels = new Set(JSON.parse(raw));
+  } catch {}
+}
+
+function saveLevels() {
+  localStorage.setItem(LEVEL_KEY, JSON.stringify([...activeLevels]));
+}
+
+function getFilteredCards() {
+  return CARDS.filter(c => activeLevels.has(String(c.level)));
+}
+
+function getLevelBadge(level) {
+  const lv = String(level);
+  if (lv === '3') return '<span class="level-badge lv3">3級</span>';
+  if (lv === '2') return '<span class="level-badge lv2">2級</span>';
+  if (lv === '2k') return '<span class="level-badge lv2k">工簿</span>';
+  return '';
+}
+
+// ─── Helpers ───
+function getToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function getCategoryById(id) {
+  return CATEGORIES.find(c => c.id === id);
+}
+
+// ─── Storage ───
+function defaultCardState() {
+  return { ef: 2.5, interval: 0, reps: 0, next: null, last: null };
+}
+
+function initData() {
+  const data = {
+    version: 1,
+    cards: {},
+    stats: { totalReviews: 0, streak: 0, lastStudy: null }
+  };
+  CARDS.forEach(c => { data.cards[c.id] = defaultCardState(); });
+  saveData(data);
+  return data;
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return initData();
+    const data = JSON.parse(raw);
+    if (data.version !== 1) return initData();
+    // ensure all cards exist
+    CARDS.forEach(c => {
+      if (!data.cards[c.id]) data.cards[c.id] = defaultCardState();
+    });
+    return data;
+  } catch { return initData(); }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function resetData() {
+  if (!confirm('進捗をリセットしますか？')) return false;
+  initData();
+  return true;
+}
+
+// ─── SM-2 Algorithm ───
+function sm2(state, quality) {
+  let { ef, interval, reps } = state;
+  if (quality < 3) {
+    reps = 0;
+    interval = 0;
+  } else {
+    if (reps === 0) interval = 1;
+    else if (reps === 1) interval = 6;
+    else interval = Math.round(interval * ef);
+    reps += 1;
+  }
+  ef += 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02);
+  ef = Math.max(1.3, ef);
+  const today = getToday();
+  const next = addDays(today, interval);
+  return { ef: Math.round(ef * 100) / 100, interval, reps, next, last: today };
+}
+
+// ─── Review Queue ───
+function buildQueue(data) {
+  const today = getToday();
+  const due = [];
+  const newCards = [];
+  const filtered = getFilteredCards();
+
+  filtered.forEach(card => {
+    const s = data.cards[card.id];
+    if (s.next === null) {
+      newCards.push(card);
+    } else if (s.next <= today) {
+      due.push(card);
+    }
+  });
+
+  due.sort((a, b) => (data.cards[a.id].next > data.cards[b.id].next ? 1 : -1));
+  const queue = [...due, ...newCards.slice(0, 10)];
+  // Shuffle (Fisher-Yates)
+  for (let i = queue.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [queue[i], queue[j]] = [queue[j], queue[i]];
+  }
+  return queue;
+}
+
+// ─── App State ───
+let appData = null;
+let queue = [];
+let currentIndex = 0;
+let isFlipped = false;
+
+// ─── DOM Refs ───
+const $ = id => document.getElementById(id);
+
+// ─── Navigation ───
+function switchView(viewName) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('active'));
+  $('view-' + viewName).classList.add('active');
+  document.querySelector(`.bottom-nav button[data-view="${viewName}"]`).classList.add('active');
+
+  if (viewName === 'dashboard') renderDashboard();
+  if (viewName === 'browse') renderChart();
+  if (viewName === 'review') startReview();
+}
+
+// ─── Dashboard ───
+function renderDashboard() {
+  const today = getToday();
+  const filtered = getFilteredCards();
+  let dueCount = 0, newCount = 0, masteredCount = 0;
+
+  filtered.forEach(card => {
+    const s = appData.cards[card.id];
+    if (s.next === null) newCount++;
+    else if (s.next <= today) dueCount++;
+    if (s.interval >= 21) masteredCount++;
+  });
+
+  $('stat-due').textContent = dueCount;
+  $('stat-new').textContent = newCount;
+  $('stat-mastered').textContent = masteredCount;
+  $('stat-total').textContent = filtered.length;
+
+  // Streak
+  const stats = appData.stats;
+  if (stats.streak > 0) {
+    $('streak-text').textContent = `${stats.streak}日連続学習中`;
+  } else {
+    $('streak-text').textContent = '今日から始めましょう！';
+  }
+
+  // Start button
+  const queueSize = buildQueue(appData).length;
+  const btn = $('btn-start');
+  if (queueSize === 0) {
+    btn.disabled = true;
+    btn.textContent = '今日の復習は完了です';
+  } else {
+    btn.disabled = false;
+    btn.textContent = `復習を始める（${queueSize}枚）`;
+  }
+
+  // Category progress
+  const progList = $('cat-progress-list');
+  progList.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const catCards = filtered.filter(c => c.cat === cat.id);
+    if (catCards.length === 0) return; // hide empty categories
+    const learned = catCards.filter(c => appData.cards[c.id].next !== null).length;
+    const pct = Math.round(learned / catCards.length * 100);
+
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.innerHTML = `
+      <div class="cat-dot" style="background:${cat.color}"></div>
+      <div class="cat-name">${cat.name}</div>
+      <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${pct}%;background:${cat.color}"></div></div>
+      <div class="cat-count">${learned}/${catCards.length}</div>
+    `;
+    progList.appendChild(row);
+  });
+}
+
+// ─── Review Session ───
+function startReview() {
+  queue = buildQueue(appData);
+  currentIndex = 0;
+
+  $('review-complete').style.display = 'none';
+  $('card-container').style.display = '';
+  $('rating-buttons').classList.remove('visible');
+  $('review-progress').style.display = '';
+
+  if (queue.length === 0) {
+    showComplete();
+    return;
+  }
+  showCard();
+}
+
+function showCard() {
+  const card = queue[currentIndex];
+  const cat = getCategoryById(card.cat);
+  isFlipped = false;
+
+  // Show front, hide back
+  document.querySelector('.card-front').classList.remove('hidden');
+  $('card-back').classList.remove('visible');
+
+  // Update content
+  $('card-level-badge').innerHTML = activeLevels.size > 1 ? getLevelBadge(card.level) : '';
+  $('card-term').textContent = card.term;
+  $('card-category').textContent = cat.name;
+  $('card-category-cn').textContent = cat.nameCn || '';
+  $('card-term-back').textContent = card.term;
+  $('card-cn').textContent = card.cn || '';
+  $('card-note-ja').textContent = card.noteJa || '';
+  $('card-note').textContent = card.note || '';
+
+  // Card back styling
+  const back = $('card-back');
+  back.style.background = hexToRgba(cat.color, 0.15);
+  back.style.borderColor = cat.color;
+  $('card-category').style.color = cat.color;
+
+  // Hide rating
+  $('rating-buttons').classList.remove('visible');
+
+  // Progress
+  $('review-progress').textContent = `${currentIndex + 1} / ${queue.length}`;
+
+  // Fade in
+  const container = $('card-container');
+  container.classList.remove('fade-in');
+  container.offsetHeight;
+  container.classList.add('fade-in');
+}
+
+function flipCard() {
+  if (isFlipped) return;
+  isFlipped = true;
+  document.querySelector('.card-front').classList.add('hidden');
+  $('card-back').classList.add('visible');
+  setTimeout(() => {
+    $('rating-buttons').classList.add('visible');
+  }, 200);
+}
+
+function rateCard(quality) {
+  const card = queue[currentIndex];
+  const oldState = appData.cards[card.id];
+  const newState = sm2(oldState, quality);
+  appData.cards[card.id] = newState;
+  appData.stats.totalReviews++;
+
+  // Update streak
+  const today = getToday();
+  const lastStudy = appData.stats.lastStudy;
+  if (!lastStudy) {
+    appData.stats.streak = 1;
+  } else if (lastStudy === today) {
+    // same day, keep streak
+  } else if (addDays(lastStudy, 1) === today) {
+    appData.stats.streak++;
+  } else {
+    appData.stats.streak = 1;
+  }
+  appData.stats.lastStudy = today;
+
+  saveData(appData);
+
+  currentIndex++;
+  if (currentIndex < queue.length) {
+    showCard();
+  } else {
+    showComplete();
+  }
+}
+
+function showComplete() {
+  $('card-container').style.display = 'none';
+  $('rating-buttons').classList.remove('visible');
+  $('review-progress').style.display = 'none';
+  $('review-complete').style.display = '';
+  $('complete-sub').textContent = `合計${appData.stats.totalReviews}回復習しました`;
+}
+
+// ─── T-Chart View ───
+function renderChart() {
+  const filtered = getFilteredCards();
+  const container = $('browse-chart');
+
+  function catCards(catId) {
+    return filtered.filter(c => c.cat === catId);
+  }
+
+  function renderItems(cards) {
+    return cards.map(c => {
+      const badge = activeLevels.size > 1 ? getLevelBadge(c.level) : '';
+      const cn = c.cn ? `<span class="t-cn"> ${c.cn}</span>` : '';
+      return `<div class="t-chart-item">${c.term}${badge}${cn}</div>`;
+    }).join('');
+  }
+
+  function renderCatBlock(cat, cards) {
+    if (cards.length === 0) return '';
+    return `
+      <div class="t-chart-cat-name" style="color:${cat.color};background:${hexToRgba(cat.color, 0.12)}">${cat.name}</div>
+      <div class="t-chart-items">${renderItems(cards)}</div>
+    `;
+  }
+
+  const asset = getCategoryById('asset');
+  const liability = getCategoryById('liability');
+  const netAsset = getCategoryById('net_asset');
+  const revenue = getCategoryById('revenue');
+  const expense = getCategoryById('expense');
+
+  let html = '<div class="t-chart">';
+
+  // Top section: 貸借対照表 (BS)
+  html += '<div class="t-chart-label" style="text-align:center;padding:6px 0;color:#666;font-size:0.75rem">貸借対照表（B/S）</div>';
+  html += '<div class="t-chart-section">';
+  html += `<div class="t-chart-cell left">
+    <div class="t-chart-label">借方（デビット）</div>
+    ${renderCatBlock(asset, catCards('asset'))}
+  </div>`;
+  html += `<div class="t-chart-cell right-stack">
+    <div class="t-chart-label">貸方（クレジット）</div>
+    <div class="t-chart-sub-block">${renderCatBlock(liability, catCards('liability'))}</div>
+    <div class="t-chart-sub-divider"></div>
+    <div class="t-chart-sub-block">${renderCatBlock(netAsset, catCards('net_asset'))}</div>
+  </div>`;
+  html += '</div>';
+
+  // Divider
+  html += '<div class="t-chart-divider"><span></span></div>';
+
+  // Bottom section: 損益計算書 (PL)
+  html += '<div class="t-chart-label" style="text-align:center;padding:6px 0;color:#666;font-size:0.75rem">損益計算書（P/L）</div>';
+  html += '<div class="t-chart-section">';
+  html += `<div class="t-chart-cell left">
+    <div class="t-chart-label">借方（デビット）</div>
+    ${renderCatBlock(expense, catCards('expense'))}
+  </div>`;
+  html += `<div class="t-chart-cell">
+    <div class="t-chart-label">貸方（クレジット）</div>
+    ${renderCatBlock(revenue, catCards('revenue'))}
+  </div>`;
+  html += '</div>';
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ─── Level Filter UI ───
+function renderLevelFilter() {
+  document.querySelectorAll('.level-chip').forEach(chip => {
+    chip.classList.toggle('active', activeLevels.has(chip.dataset.level));
+  });
+}
+
+// ─── Init ───
+document.addEventListener('DOMContentLoaded', () => {
+  loadLevels();
+  appData = loadData();
+
+  // Chinese toggle (synced across views)
+  const cnToggles = document.querySelectorAll('.toggle-cn-sync');
+  const showCn = localStorage.getItem(CN_KEY) !== 'false'; // default: show
+  cnToggles.forEach(t => t.checked = showCn);
+  if (!showCn) document.body.classList.add('hide-cn');
+  cnToggles.forEach(toggle => {
+    toggle.addEventListener('change', () => {
+      const val = toggle.checked;
+      document.body.classList.toggle('hide-cn', !val);
+      localStorage.setItem(CN_KEY, val);
+      cnToggles.forEach(t => t.checked = val); // sync all
+    });
+  });
+
+  // Level filter
+  document.querySelectorAll('.level-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const lv = chip.dataset.level;
+      if (activeLevels.has(lv)) {
+        if (activeLevels.size > 1) activeLevels.delete(lv); // prevent deselecting all
+      } else {
+        activeLevels.add(lv);
+      }
+      saveLevels();
+      renderLevelFilter();
+      renderDashboard();
+    });
+  });
+  renderLevelFilter();
+
+  // Nav
+  document.querySelectorAll('.bottom-nav button').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  // Card flip
+  $('card-container').addEventListener('click', flipCard);
+
+  // Rating buttons
+  document.querySelectorAll('.rating-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      rateCard(parseInt(btn.dataset.quality));
+    });
+  });
+
+  // Start review
+  $('btn-start').addEventListener('click', () => switchView('review'));
+
+  // Back from review
+  $('btn-review-back').addEventListener('click', () => switchView('dashboard'));
+  $('btn-complete-back').addEventListener('click', () => switchView('dashboard'));
+
+  // Reset
+  $('btn-reset').addEventListener('click', () => {
+    if (resetData()) {
+      appData = loadData();
+      renderDashboard();
+    }
+  });
+
+  renderDashboard();
+});
+</script>
+</body>
+</html>
