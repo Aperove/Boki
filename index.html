@@ -367,9 +367,40 @@ body {
   font-weight: 700;
   margin-bottom: 8px;
 }
-#review-complete .complete-sub {
-  color: var(--text-secondary);
+.complete-summary {
   margin-bottom: 24px;
+  text-align: left;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.complete-summary .summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #2A2A2A;
+  font-size: 0.85rem;
+}
+.complete-summary .summary-row:last-child { border-bottom: none; }
+.complete-summary .summary-label { color: var(--text-secondary); }
+.complete-summary .summary-value { font-weight: 600; }
+.complete-summary .summary-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.complete-summary .bar-forgot { background: #D32F2F; }
+.complete-summary .bar-hard { background: #F57C00; }
+.complete-summary .bar-good { background: #388E3C; }
+.complete-summary .bar-easy { background: #1976D2; }
+.complete-summary .summary-msg {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-top: 12px;
 }
 .btn-dashboard {
   padding: 14px 28px;
@@ -653,7 +684,7 @@ body.hide-cn .browse-item-cn { display: none; }
     <div id="review-complete" style="display:none">
       <div class="complete-emoji">&#127881;</div>
       <div class="complete-text">お疲れ様！</div>
-      <div class="complete-sub" id="complete-sub">今日の復習は完了です</div>
+      <div class="complete-summary" id="complete-summary"></div>
       <button class="btn-dashboard" id="btn-complete-back">ダッシュボードへ</button>
     </div>
   </section>
@@ -840,6 +871,7 @@ let appData = null;
 let queue = [];
 let currentIndex = 0;
 let isFlipped = false;
+let sessionStats = { total: 0, forgot: 0, hard: 0, good: 0, easy: 0, newCount: 0 };
 
 // ─── DOM Refs ───
 const $ = id => document.getElementById(id);
@@ -918,6 +950,7 @@ function renderDashboard() {
 function startReview() {
   queue = buildQueue(appData);
   currentIndex = 0;
+  sessionStats = { total: 0, forgot: 0, hard: 0, good: 0, easy: 0, newCount: 0 };
 
   $('review-complete').style.display = 'none';
   $('card-container').style.display = '';
@@ -982,9 +1015,18 @@ function flipCard() {
 function rateCard(quality) {
   const card = queue[currentIndex];
   const oldState = appData.cards[card.id];
+  const isNew = oldState.next === null;
   const newState = sm2(oldState, quality);
   appData.cards[card.id] = newState;
   appData.stats.totalReviews++;
+
+  // Session stats
+  sessionStats.total++;
+  if (isNew) sessionStats.newCount++;
+  if (quality === 0) sessionStats.forgot++;
+  else if (quality === 3) sessionStats.hard++;
+  else if (quality === 4) sessionStats.good++;
+  else if (quality === 5) sessionStats.easy++;
 
   // Update streak
   const today = getToday();
@@ -1015,7 +1057,37 @@ function showComplete() {
   $('rating-buttons').classList.remove('visible');
   $('review-progress').style.display = 'none';
   $('review-complete').style.display = '';
-  $('complete-sub').textContent = `合計${appData.stats.totalReviews}回復習しました`;
+
+  const s = sessionStats;
+  const total = s.total || 1;
+  const goodRate = Math.round((s.good + s.easy) / total * 100);
+
+  // Progress bar
+  const bar = [
+    s.forgot ? `<div class="bar-forgot" style="flex:${s.forgot}"></div>` : '',
+    s.hard ? `<div class="bar-hard" style="flex:${s.hard}"></div>` : '',
+    s.good ? `<div class="bar-good" style="flex:${s.good}"></div>` : '',
+    s.easy ? `<div class="bar-easy" style="flex:${s.easy}"></div>` : '',
+  ].join('');
+
+  // Encouragement
+  let msg = '';
+  if (goodRate >= 80) msg = 'すごい！この調子で頑張ろう！';
+  else if (goodRate >= 50) msg = 'いい感じ！もう少しで完璧！';
+  else msg = '繰り返し復習すれば必ず覚えられる！';
+
+  $('complete-summary').innerHTML = `
+    <div class="summary-row"><span class="summary-label">復習枚数</span><span class="summary-value">${s.total} 枚</span></div>
+    ${s.newCount ? `<div class="summary-row"><span class="summary-label">新規カード</span><span class="summary-value">${s.newCount} 枚</span></div>` : ''}
+    <div class="summary-row"><span class="summary-label">正答率</span><span class="summary-value">${goodRate}%</span></div>
+    <div class="summary-bar">${bar}</div>
+    <div class="summary-row"><span class="summary-label">🔴 忘れた</span><span class="summary-value">${s.forgot}</span></div>
+    <div class="summary-row"><span class="summary-label">🟠 難しい</span><span class="summary-value">${s.hard}</span></div>
+    <div class="summary-row"><span class="summary-label">🟢 良い</span><span class="summary-value">${s.good}</span></div>
+    <div class="summary-row"><span class="summary-label">🔵 簡単</span><span class="summary-value">${s.easy}</span></div>
+    <div class="summary-row"><span class="summary-label">累計復習回数</span><span class="summary-value">${appData.stats.totalReviews}</span></div>
+    <div class="summary-msg">${msg}</div>
+  `;
 }
 
 // ─── T-Chart View ───
